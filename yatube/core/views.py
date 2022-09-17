@@ -3,7 +3,12 @@ from http.client import FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND
 
 
 def page_not_found(request, exception):
-    return render(request, 'core/404.html', {'path': request.path}, status=NOT_FOUND)
+    return render(
+        request,
+        'core/404.html',
+        {'path': request.path},
+        status=NOT_FOUND,
+    )
 
 
 def csrf_failure(request, exception):

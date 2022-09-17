@@ -100,7 +100,9 @@ class PostCreateFormTests(TestCase):
         )
         comment_new = Comment.objects.all()
         comment_new_set = set(comment_new)
-        difference_sets_of_comments = comment_new_set.difference(comment_count_set)
+        difference_sets_of_comments = comment_new_set.difference(
+            comment_count_set
+        )
         self.assertEqual(len(difference_sets_of_comments), 1)
         last_comment = difference_sets_of_comments.pop()
         self.assertEqual(last_comment.text, form_data['text'])

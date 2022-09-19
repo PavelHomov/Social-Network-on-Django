@@ -1,8 +1,6 @@
 import shutil
 import tempfile
 
-from http import HTTPStatus
-
 from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 from django.core.cache import cache
@@ -198,7 +196,11 @@ class PostTests(TestCase):
         pages = [
             reverse('posts:index'),
             reverse('posts:group_list', kwargs={'slug': new_group.slug}),
-            reverse('posts:profile', kwargs={'username': test_post.author.username})
+            reverse(
+                'posts:profile', kwargs={
+                    'username': test_post.author.username
+                }
+            )
         ]
         for reverse_page in pages:
             with self.subTest(reverse_page=reverse_page):

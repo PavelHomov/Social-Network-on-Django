@@ -8,7 +8,7 @@ from .utils import paginator_func
 
 def index(request):
     """View функция для index."""
-    post_list = Post.objects.all().order_by('-pub_date')
+    post_list = Post.objects.all()
     context = {
         'page_obj': paginator_func(request, post_list),
     }
@@ -19,7 +19,7 @@ def index(request):
 def group_posts(request, slug):
     """View функция для group_posts."""
     group = get_object_or_404(Group, slug=slug)
-    post_list = group.posts.select_related('group').order_by('-pub_date')
+    post_list = group.posts.select_related('author')
     context = {
         'group': group,
         'page_obj': paginator_func(request, post_list),
@@ -31,7 +31,7 @@ def group_posts(request, slug):
 def profile(request, username):
     """View функция для profile."""
     author = get_object_or_404(User, username=username)
-    post_list = author.posts.select_related('group').order_by('-pub_date')
+    post_list = author.posts.select_related('group')
     if request.user.is_authenticated:
         following = request.user.follower.filter(author=author).exists()
     else:
@@ -48,6 +48,7 @@ def profile(request, username):
 def post_detail(request, post_id):
     """View функция для post_detail."""
     post = get_object_or_404(Post, pk=post_id)
+    # comments = post.comments.all()
     comments = Comment.objects.filter(post_id=post_id)
     form = CommentForm(request.POST or None)
     context = {
@@ -113,6 +114,7 @@ def add_comment(request, post_id):
         comment.author = request.user
         comment.post = post
         comment.save()
+
     return redirect('posts:post_detail', post_id=post_id)
 
 
@@ -130,25 +132,18 @@ def follow_index(request):
 def profile_follow(request, username):
     """View функция для того, чтобы подписаться."""
     author = get_object_or_404(User, username=username)
-    if author == request.user:
-        return redirect(
-            'posts:profile',
-            username=username
-        )
     follower = Follow.objects.filter(
         user=request.user,
         author=author
     ).exists()
-    if follower is True:
-        return redirect(
-            'posts:profile',
-            username=username
+    if request.user != author and not follower:
+        follow = Follow.objects.create(
+            user=request.user,
+            author=author
         )
-    Follow.objects.create(user=request.user, author=author)
-    return redirect(
-        'posts:profile',
-        username=username
-    )
+        follow.save()
+
+    return redirect('posts:profile', username=username)
 
 
 @login_required

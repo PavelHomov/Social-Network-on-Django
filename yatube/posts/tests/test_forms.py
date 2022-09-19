@@ -1,12 +1,21 @@
+import shutil
+import tempfile
+
 from http import HTTPStatus
 
-from django.test import Client, TestCase
+from django.conf import settings
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from ..forms import PostForm
 from ..models import Group, Post, User, Comment
 
 
+TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
+
+
+@override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
 class PostCreateFormTests(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -25,6 +34,11 @@ class PostCreateFormTests(TestCase):
         )
         cls.form = PostForm()
 
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
+
     def setUp(self):
         self.authorized_client = Client()
         self.authorized_client.force_login(PostCreateFormTests.auth_user)
@@ -33,11 +47,23 @@ class PostCreateFormTests(TestCase):
 
     def test_create_post(self):
         """Валидная форма создает запись в Posts."""
-        post_count = Post.objects.all()
-        post_count_set = set(post_count)
+        posts = set(Post.objects.all())
+        image = SimpleUploadedFile(
+            name='1_small.gif',
+            content=(
+                b'\x47\x49\x46\x38\x39\x61\x02\x00'
+                b'\x01\x00\x80\x00\x00\x00\x00\x00'
+                b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
+                b'\x00\x00\x00\x2C\x00\x00\x00\x00'
+                b'\x02\x00\x01\x00\x00\x02\x02\x0C'
+                b'\x0A\x00\x3B'
+            ),
+            content_type='image/gif'
+        )
         form_data = {
             'text': 'Введенный в форму текст',
             'group': self.group.pk,
+            'image': image,
         }
         response = self.authorized_client.post(
             reverse('posts:post_create'),
@@ -50,13 +76,13 @@ class PostCreateFormTests(TestCase):
                 'posts:profile', kwargs={'username': self.auth_user.username}
             )
         )
-        post_new = Post.objects.all()
-        post_new_set = set(post_new)
-        difference_sets_of_posts = post_new_set.difference(post_count_set)
+        new_posts = set(Post.objects.all())
+        difference_sets_of_posts = new_posts.difference(posts)
         self.assertEqual(len(difference_sets_of_posts), 1)
-        last_post = difference_sets_of_posts.pop()
-        self.assertEqual(last_post.text, form_data['text'])
-        self.assertEqual(last_post.group.pk, form_data['group'])
+        last_posts = difference_sets_of_posts.pop()
+        self.assertEqual(last_posts.text, form_data['text'])
+        self.assertEqual(last_posts.group.pk, form_data['group'])
+        self.assertEqual(last_posts.image, 'posts/1_small.gif')
 
     def test_author_edit_post(self):
         """Валидная форма изменяет запись в Posts."""
@@ -82,9 +108,9 @@ class PostCreateFormTests(TestCase):
 
     def test_create_comment(self):
         """Валидная форма создает комментарий."""
-        comment_count = Comment.objects.all()
-        comment_count_set = set(comment_count)
+        comments = set(Comment.objects.all())
         form_data = {
+            'author': self.auth_user,
             'text': 'Новый комментарий',
         }
         response = self.authorized_client.post(
@@ -98,11 +124,35 @@ class PostCreateFormTests(TestCase):
                 'posts:post_detail', kwargs={'post_id': self.post.pk}
             )
         )
-        comment_new = Comment.objects.all()
-        comment_new_set = set(comment_new)
-        difference_sets_of_comments = comment_new_set.difference(
-            comment_count_set
+        new_comments = set(Comment.objects.all())
+        difference_sets_of_comments = new_comments.difference(
+            comments
         )
         self.assertEqual(len(difference_sets_of_comments), 1)
-        last_comment = difference_sets_of_comments.pop()
-        self.assertEqual(last_comment.text, form_data['text'])
+        last_comments = difference_sets_of_comments.pop()
+        self.assertEqual(last_comments.text, form_data['text'])
+        self.assertEqual(last_comments.author, form_data['author'])
+
+    def test_commenting_is_available_only_authorized_user(self):
+        """Комментирование доступно только авторизованному пользователю."""
+        form_data = {
+            'text': 'Комментарий',
+        }
+        response_authorized = self.authorized_client.get(
+            reverse('posts:add_comment', kwargs={
+                'post_id': self.post.pk}
+            ),
+            data=form_data,
+            follow=True
+        )
+        self.assertEqual(response_authorized.status_code, HTTPStatus.OK)
+        response_not_authorized = self.client.get(
+            reverse('posts:add_comment', kwargs={
+                'post_id': self.post.pk}
+            ),
+            data=form_data
+        )
+        self.assertEqual(
+            response_not_authorized.status_code,
+            HTTPStatus.FOUND
+        )

@@ -1,6 +1,5 @@
 import shutil
 import tempfile
-
 from http import HTTPStatus
 
 from django.conf import settings
@@ -83,6 +82,7 @@ class PostCreateFormTests(TestCase):
         self.assertEqual(last_posts.text, form_data['text'])
         self.assertEqual(last_posts.group.pk, form_data['group'])
         self.assertEqual(last_posts.image, 'posts/1_small.gif')
+        self.assertEqual(last_posts.author, self.auth_user)
 
     def test_author_edit_post(self):
         """Валидная форма изменяет запись в Posts."""
@@ -105,6 +105,7 @@ class PostCreateFormTests(TestCase):
         self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(post_edit.text, form_data['text'])
         self.assertEqual(post_edit.group.pk, form_data['group'])
+        self.assertEqual(post_edit.author, self.author)
 
     def test_create_comment(self):
         """Валидная форма создает комментарий."""

@@ -48,8 +48,7 @@ def profile(request, username):
 def post_detail(request, post_id):
     """View функция для post_detail."""
     post = get_object_or_404(Post, pk=post_id)
-    # comments = post.comments.all()
-    comments = Comment.objects.filter(post_id=post_id)
+    comments = post.comments.all()
     form = CommentForm(request.POST or None)
     context = {
         'post': post,
@@ -137,11 +136,10 @@ def profile_follow(request, username):
         author=author
     ).exists()
     if request.user != author and not follower:
-        follow = Follow.objects.create(
+        Follow.objects.create(
             user=request.user,
             author=author
         )
-        follow.save()
 
     return redirect('posts:profile', username=username)
 

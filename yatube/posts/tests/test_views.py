@@ -11,7 +11,6 @@ from django import forms
 from ..models import Group, Post, User, Follow
 from ..constants import POSTS_PAGE
 
-
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 
 
@@ -64,12 +63,8 @@ class PostTests(TestCase):
     def check_post(self, post):
         self.assertEqual(post.id, self.post.id)
         self.assertEqual(post.text, self.post.text)
-        self.assertEqual(
-            post.author.username, self.post.author.username
-        )
-        self.assertEqual(
-            post.group.title, self.post.group.title
-        )
+        self.assertEqual(post.author, self.post.author)
+        self.assertEqual(post.group, self.post.group)
         self.assertEqual(post.image, self.post.image)
 
     def test_pages_uses_correct_template(self):
@@ -140,6 +135,8 @@ class PostTests(TestCase):
         self.check_post(context)
         comments = len(set(response.context.get('comments')))
         self.assertEqual(comments, len(self.post.comments.all()))
+        form = response.context.get('form')
+        self.assertIsInstance(form.fields['text'], forms.CharField)
 
     def test_create_post_edit_show_correct_context(self):
         """Шаблон редактирования поста create_post сформирован
@@ -256,11 +253,17 @@ class PostTests(TestCase):
 
     def test_unfollow_user(self):
         """Тест отписки от другого пользователя."""
+        Follow.objects.create(
+            user=self.auth_user,
+            author=self.author,
+        )
+        follows_count = Follow.objects.count()
+        self.assertEqual(follows_count, 1)
         self.authorized_client.get(
             reverse(
                 'posts:profile_unfollow',
                 kwargs={
-                    'username': self.auth_user
+                    'username': self.author
                 }
             )
         )
@@ -280,7 +283,7 @@ class PostTests(TestCase):
             reverse('posts:follow_index')
         )
         page_object = response_subscribed.context['page_obj'][0]
-        self.assertEqual(page_object.text, self.post.text)
+        self.assertEqual(page_object, self.post)
 
     def test_unfollowers_dont_see_author_posts(self):
         """Новая запись пользователя не появляется в ленте тех, кто на него

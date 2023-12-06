@@ -2,13 +2,13 @@
 {% load thumbnail %}
 {% load cache %}
 {% block title %}
-  <title>Постов пока нет</title>
+  <title>Посты: </title>
 {% endblock %}
 {% block content %}
 {% cache 20 index_page %}
   <div class="container">
     {% include 'posts/includes/switcher.html' %}
-  <h1>Постов пока нет</h1>
+  <h1>Посты: </h1>
     {% for post in page_obj %}
     {% include 'posts/includes/post_card.html' %}
     {% if not forloop.last %}<hr>{% endif %}

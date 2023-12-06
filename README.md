@@ -21,12 +21,18 @@ docker run -it --rm -p 8000:8000 my-django-app
 
 ### Как запустить проект:
 
+Создать .env файл в корне проекта:
+
+```
+SECRET_KEY=ваш_ключ
+```
+
 Клонировать репозиторий и перейти в него в командной строке:
 
 Cоздать и активировать виртуальное окружение:
 
 ```
-python -m venv venv
+python3 -m venv venv
 ```
 
 ```
@@ -36,25 +42,25 @@ source venv/scripts/activate
 Установить зависимости из файла requirements.txt:
 
 ```
-python -m pip install --upgrade pip
+python3 -m pip install --upgrade pip
 ```
 
 ```
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 ```
 
 Выполнить миграции:
 
 ```
-python manage.py makemigrations
+python3 manage.py makemigrations
 ```
 
 ```
-python manage.py migrate
+python3 manage.py migrate
 ```
 
 Запустить проект:
 
 ```
-python manage.py runserver
+python3 manage.py runserver
 ```
